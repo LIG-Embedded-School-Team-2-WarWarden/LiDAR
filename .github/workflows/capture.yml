@@ -1,0 +1,23 @@
+name: Capture library contracts
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: XT-Toffuture/xtsdk_cpp
+          ref: 3d3db067ae9bdc0528202c3087bc10fd3b706638
+          path: official-sdk
+      - run: cmake -S . -B build -DLIDAR_WITH_XTSDK=OFF
+      - run: cmake --build build --parallel 2
+      - run: ctest --test-dir build --output-on-failure
+      # Compile against official headers as well as the execution fixture.
+      # This does not link or exercise the manufacturer's closed binary.
+      - run: g++ -std=c++17 -Icapture -Iofficial-sdk/xtsdk -c capture/xt_capture.cpp -o capture-official.o
+      - run: sudo apt-get update && sudo apt-get install -y g++-arm-linux-gnueabihf
+      - run: arm-linux-gnueabihf-g++ -std=c++17 -Icapture -Iofficial-sdk/xtsdk -c capture/xt_capture.cpp -o capture-arm.o
+      - run: file capture-arm.o
